@@ -17,6 +17,7 @@ module "network_security_group" {
   location            = var.location
   resource_group_name = module.resource_group.name
   tags                = var.tags
+  security_rules      = var.security_rules
 
   depends_on = [module.resource_group]
 }

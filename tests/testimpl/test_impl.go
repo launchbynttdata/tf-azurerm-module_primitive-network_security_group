@@ -5,41 +5,44 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	armNetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v5"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/nexient-llc/lcaf-component-terratest-common/lib/azure/configure"
 	"github.com/nexient-llc/lcaf-component-terratest-common/lib/azure/login"
-	"github.com/nexient-llc/lcaf-component-terratest-common/lib/azure/network"
 	"github.com/nexient-llc/lcaf-component-terratest-common/types"
 	"github.com/stretchr/testify/assert"
 )
 
-const terraformDir string = "../../examples/nsg"
-const varFile string = "test.tfvars"
-
 func TestNsg(t *testing.T, ctx types.TestContext) {
 
 	envVarMap := login.GetEnvironmentVariables()
-	clientID := envVarMap["clientID"]
-	clientSecret := envVarMap["clientSecret"]
-	tenantID := envVarMap["tenantID"]
 	subscriptionID := envVarMap["subscriptionID"]
 
-	// Create an authorizer from env vars or Azure Managed Service Idenity
-	spt, err := login.GetServicePrincipalToken(clientID, clientSecret, tenantID)
+	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		t.Fatalf("Error getting Service Principal Token: %v", err)
+		t.Fatalf("Unable to get credentials: %e\n", err)
 	}
 
-	// Create network security group client
-	nsgClient := network.GetNsgClient(spt, subscriptionID)
+	options := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: cloud.AzurePublic,
+		},
+	}
 
-	terraformOptions := configure.ConfigureTerraform(terraformDir, []string{terraformDir + "/" + varFile})
+	nsgClient, err := armNetwork.NewSecurityGroupsClient(subscriptionID, credential, &options)
+	if err != nil {
+		t.Fatalf("Error getting NSG client: %v", err)
+	}
+
 	t.Run("doesNsgExist", func(t *testing.T) {
-		resourceGroupName := terraform.Output(t, terraformOptions, "resource_group_name")
-		nsgName := terraform.Output(t, terraformOptions, "nsg_name")
-		nsgId := terraform.Output(t, terraformOptions, "network_security_group_id")
+		resourceGroupName := terraform.Output(t, ctx.TerratestTerraformOptions(), "resource_group_name")
+		nsgName := terraform.Output(t, ctx.TerratestTerraformOptions(), "nsg_name")
+		nsgId := terraform.Output(t, ctx.TerratestTerraformOptions(), "network_security_group_id")
 
-		nsg, err := nsgClient.Get(context.Background(), resourceGroupName, nsgName, "")
+		nsg, err := nsgClient.Get(context.Background(), resourceGroupName, nsgName, nil)
 		if err != nil {
 			t.Fatalf("Error getting NSG: %v", err)
 		}
@@ -48,6 +51,7 @@ func TestNsg(t *testing.T, ctx types.TestContext) {
 		}
 
 		assert.Equal(t, getNsgName(*nsg.ID), strings.Trim(getNsgName(nsgId), "]"))
+		assert.NotEmpty(t, nsg.Properties.SecurityRules)
 	})
 }
 
