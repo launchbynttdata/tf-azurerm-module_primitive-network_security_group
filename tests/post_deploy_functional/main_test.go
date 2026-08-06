@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	testConfigsExamplesFolderDefault = "../../examples"
+	testConfigsExamplesFolderDefault = "../../examples/nsg"
 	infraTFVarFileNameDefault        = "test.tfvars"
 )
 
@@ -32,11 +32,11 @@ func TestNsgModule(t *testing.T) {
 		SetTestConfigFolderName(testConfigsExamplesFolderDefault).
 		SetTestConfigFileName(infraTFVarFileNameDefault).
 		SetTestSpecificFlags(map[string]types.TestFlags{
-			"complete": {
+			"nsg": {
 				"IS_TERRAFORM_IDEMPOTENT_APPLY": true,
 			},
 		}).
 		Build()
 
-	lib.RunSetupTestTeardown(t, *ctx, testimpl.TestNsg)
+	lib.RunSetupTestTeardown(t, *ctx, testimpl.TestComposableNsg)
 }
