@@ -40,9 +40,9 @@ func TestComposableNsg(t *testing.T, ctx types.TestContext) {
 	}
 
 	t.Run("doesNsgExist", func(t *testing.T) {
-		resourceGroupName := terraform.Output(t, ctx.TerratestTerraformOptions(), "resource_group_name")
-		nsgName := terraform.Output(t, ctx.TerratestTerraformOptions(), "nsg_name")
-		nsgId := terraform.Output(t, ctx.TerratestTerraformOptions(), "network_security_group_id")
+		resourceGroupName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "resource_group_name")
+		nsgName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "nsg_name")
+		nsgId := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "network_security_group_id")
 
 		nsg, err := nsgClient.Get(context.Background(), resourceGroupName, nsgName, nil)
 		if err != nil {
